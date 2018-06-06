@@ -224,47 +224,26 @@ void CLab3D::Start()
 
         for(itDeque = TimeDeque.begin();itDeque != TimeDeque.end() ; itDeque++)
         {
-            if(TimeList.size() == 0)
-            {
-                TimeList.push_back(*itDeque);
-            }
-            else
-            {
-                itListSecond = --TimeList.end();
-                if(*itDeque > *itListSecond)
-                {
-                    TimeList.push_back(*itDeque);
-                }
-                else
-                {
-                    for(itListFirst = TimeList.begin(); itListFirst != TimeList.end(); itListFirst++)
-                    {
-                        if(*itDeque > *itListFirst)
-                        {
-                            continue;
-                        }
-                    TimeList.insert(itListFirst, *itDeque);
-                    break;
-                    }
-                }
-            }
-
-            itListFirst = TimeList.begin();
-
-            if(!(TimeList.size() % 2))
-            {
-                advance(itListFirst, (TimeList.size() / 2));
-                auto tempMed1 = *itListFirst--;
-                auto tempMed2 = *itListFirst;
-                medianValue = (tempMed1 + tempMed2) / 2;
-            }
-            if((TimeList.size() % 2))
-            {
-                advance(itListFirst, (TimeList.size() / 2));
-                medianValue = *itListFirst;
-            }
-
+            TimeList.push_back(*itDeque);
         }
+
+        TimeList.sort();
+
+        itListFirst = TimeList.begin();
+
+        if(!(TimeList.size() % 2))
+        {
+            advance(itListFirst, (TimeList.size() / 2));
+            auto tempMed1 = *itListFirst--;
+            auto tempMed2 = *itListFirst;
+            medianValue = (tempMed1 + tempMed2) / 2;
+        }
+        if((TimeList.size() % 2))
+        {
+            advance(itListFirst, (TimeList.size() / 2));
+            medianValue = *itListFirst;
+        }
+
         auto endSortTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<float> diffSortTime = endSortTime - endTime;
 
