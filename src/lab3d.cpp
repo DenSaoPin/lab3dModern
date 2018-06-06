@@ -265,7 +265,8 @@ void CLab3D::Start()
             }
 
         }
-
+        auto endSortTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> diffSortTime = endSortTime - endTime;
 
 
 
@@ -274,7 +275,7 @@ void CLab3D::Start()
 //        medianValue = sec / medianValue;
 
         char str[255];
-        sprintf(str, "X:%d Y:%d A:%d FPS:%d", player.pos.x, player.pos.y, player.angle, std::chrono::duration_cast<std::chrono::nanoseconds>(medianValue).count() );
+        sprintf(str, "X:%d Y:%d A:%d FPS:%d ST:%d", player.pos.x, player.pos.y, player.angle, std::chrono::duration_cast<std::chrono::nanoseconds>(medianValue).count(),std::chrono::duration_cast<std::chrono::nanoseconds>(diffSortTime).count() );
         m_pDrawer->DrawText(3, 0, str);
         m_pDrawer->FlushBuffer();
         usleep(1000 * 10);
