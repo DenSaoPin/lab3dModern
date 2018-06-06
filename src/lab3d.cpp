@@ -12,6 +12,7 @@
 #include <chrono>
 #include <list>
 #include <iterator>
+#include <queue>
 
 CLab3D::CLab3D(IDrawer *pDrawer, int fov)
 {
@@ -90,11 +91,17 @@ void CLab3D::Start()
 */
 
     std::list<std::chrono::duration<float>> TimeList;
-    std::list<std::chrono::duration<float>>::iterator itSecond, itFirst;
+    std::list<std::chrono::duration<float>>::iterator itListSecond, itListFirst;
 
     std::chrono::duration<float> medianValue;
 
+    std::deque<std::chrono::duration<float>> TimeDeque;
+    std::deque<std::chrono::duration<float>>::iterator itDeque;
+
+    //std::deque<std::chrono::duration<float>> SortedTimeDeque;
+
     double maxSizelist = 300.0;
+    int maxQueueSize = 20;
 
     while(1)
     {
@@ -154,37 +161,27 @@ void CLab3D::Start()
         dP.x = ( sP.x - zP.x ) / (double) (_width / 2.0);
         dP.y = ( sP.y - zP.y ) / (double) (_width / 2.0);
 
-        //double dA = (double)_fov / (double)_width; //maybe width?
-
         std::vector <double> DistVec;
 
-        for(int i = 0; i < _width; i++) //maybe width?
+        for(int i = 0; i < _width; i++)
         {
             Geom::SSegment seg;
             seg.ptBegin = player.pos;
 
             Geom::SPoint dPos = (dP * (float)i);
             seg.ptEnd = sP - dPos ;
-            /*
-            double cA = startA + dA * i;
-            double cARad = (cA * M_PI) / 180.0;
-            seg.ptEnd.x =  cos(cARad) * maxDistance + player.pos.x;
-            seg.ptEnd.y =  sin(cARad) * maxDistance + player.pos.y;
 
-            */
             double distToIntersect = maxDistance / cos(D2R(deltaA));
-            //printf(" map %d ", _map.size());
 
             for(int iMapSeg = 0; iMapSeg < _map.size(); iMapSeg++)
             {
                 Geom::SPoint ptInter;
                 bool inters = FindIntersect(&seg, &_map[iMapSeg], ptInter);
-                //printf(" seg %d,%d ", seg.ptEnd.x, seg.ptEnd.y);
+
                 if(inters)
                 {
-                //printf(" int %d,%d ", ptInter.x, ptInter.y);
                     double tempDist = FindDistance(seg.ptBegin, ptInter);
-                    //printf(" tmpdist %f ", tempDist);
+
                     if(tempDist < distToIntersect)
                         distToIntersect = tempDist;
                 }
@@ -203,87 +200,73 @@ void CLab3D::Start()
 
         for(int i = 0; i < DistVec.size(); i++ )
         {
-
-
-            //printf("%f ", DistVec[i]);
-
            int wallHeight = (maxDistance - DistVec[i]) * DistCoeff;
-            //printf("%d ", wallHeight);
             //Drawing in center.
             double pointX = ((double)_height + (double)wallHeight) / 2.0 - 1.25;
              pointX = round(pointX);
-            //pointX = (int)pointX + 0.5;
 
-
-
-            //printf("%f ", pointX);
             for(int j = 0; j < wallHeight; j++ )
             {
                  m_pDrawer->DrawPixel(i, pointX, '#');
                  pointX--;
-                 //printf("%d ", pointX);
             }
         }
         auto endTime = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<float> diffTime = endTime - startTime;
 
-        if(TimeList.size() == 0)
-        {
-            TimeList.push_back(diffTime);
-        }
-        else if (TimeList.size() >= maxSizelist)
-        {
-            itFirst = itSecond = TimeList.begin();
+        TimeDeque.push_back(diffTime);
 
-            advance(itSecond, maxSizelist / 3 );
-            //TODO IT is Right?
-            //TimeList.erase(TimeList.begin(), itSecond);
-            TimeList.erase(itFirst, itSecond);
+        if(TimeDeque.size() >= maxQueueSize)
+            TimeDeque.pop_front();
 
-            itSecond = TimeList.end();
-            advance(itSecond, -(maxSizelist / 3));
-            TimeList.erase(itSecond, TimeList.end());
-            /*itReverse = TimeList.rbegin();
-            advance(itReverse, maxSizelist / 3);
-            itSecond = TimeList.end();
-            TimeList.erase(itReverse, itSecond);*/
-        }
-        else
+        TimeList.erase(TimeList.begin(), TimeList.end());
+
+        for(itDeque = TimeDeque.begin();itDeque != TimeDeque.end() ; itDeque++)
         {
-            itSecond = --TimeList.end();
-            if(diffTime > *itSecond)
+            if(TimeList.size() == 0)
             {
-                TimeList.push_back(diffTime);
+                TimeList.push_back(*itDeque);
             }
             else
             {
-                for(itFirst = TimeList.begin(); itFirst != TimeList.end(); itFirst++)
+                itListSecond = --TimeList.end();
+                if(*itDeque > *itListSecond)
                 {
-                    if(diffTime > *itFirst)
+                    TimeList.push_back(*itDeque);
+                }
+                else
+                {
+                    for(itListFirst = TimeList.begin(); itListFirst != TimeList.end(); itListFirst++)
                     {
-                        continue;
-                    }
-                    TimeList.insert(itFirst, diffTime);
+                        if(*itDeque > *itListFirst)
+                        {
+                            continue;
+                        }
+                    TimeList.insert(itListFirst, *itDeque);
                     break;
+                    }
                 }
             }
+
+            itListFirst = TimeList.begin();
+
+            if(!(TimeList.size() % 2))
+            {
+                advance(itListFirst, (TimeList.size() / 2));
+                auto tempMed1 = *itListFirst--;
+                auto tempMed2 = *itListFirst;
+                medianValue = (tempMed1 + tempMed2) / 2;
+            }
+            if((TimeList.size() % 2))
+            {
+                advance(itListFirst, (TimeList.size() / 2));
+                medianValue = *itListFirst;
+            }
+
         }
 
-        itFirst = TimeList.begin();
 
-        if(!(TimeList.size() % 2))
-        {
-            advance(itFirst, (TimeList.size() / 2));
-            auto tempMed1 = *itFirst--;
-            auto tempMed2 = *itFirst;
-            medianValue = (tempMed1 + tempMed2) / 2;
-        }
-        if((TimeList.size() % 2))
-        {
-            advance(itFirst, (TimeList.size() / 2));
-            medianValue = *itFirst;
-        }
 
 
      //   std::chrono::seconds sec{1};
@@ -291,7 +274,7 @@ void CLab3D::Start()
 //        medianValue = sec / medianValue;
 
         char str[255];
-        sprintf(str, "X:%d Y:%d A:%d FPS:%d", player.pos.x, player.pos.y, player.angle,  std::chrono::duration_cast<std::chrono::nanoseconds>(medianValue).count() );
+        sprintf(str, "X:%d Y:%d A:%d FPS:%d", player.pos.x, player.pos.y, player.angle, std::chrono::duration_cast<std::chrono::nanoseconds>(medianValue).count() );
         m_pDrawer->DrawText(3, 0, str);
         m_pDrawer->FlushBuffer();
         usleep(1000 * 10);
